@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.spec
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb~
+
+# Model weights (large binary files — share via Kaggle/HuggingFace Hub instead)
+*.pth
+*.pt
+*.ckpt
+*.bin
+
+# Data
+data/
+*.txt
+!requirements.txt
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs & outputs
+logs/
+*.log
+wandb/
+runs/
