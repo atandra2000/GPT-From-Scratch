@@ -97,10 +97,9 @@ class TransformerBlock(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Attention sub-layer with residual
-        x = self.norm1(x + self.dropout(self.attn(x)))
-        # Feed-forward sub-layer with residual
-        x = self.norm2(x + self.dropout(self.ffn(x)))
+        # Pre-norm: normalise → sublayer → residual (GPT-2 style)
+        x = x + self.dropout(self.attn(self.norm1(x)))
+        x = x + self.dropout(self.ffn(self.norm2(x)))
         return x
 
 

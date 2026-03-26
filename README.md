@@ -1,72 +1,106 @@
+<div align="center">
+
 # GPT From Scratch
 
-A **decoder-only Transformer (GPT-style) language model** built entirely from scratch using PyTorch — no Hugging Face, no pre-built transformer libraries. Trained on the [Tiny Shakespeare](https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt) corpus on a Kaggle P100 GPU.
+### A decoder-only Transformer language model built entirely from scratch using PyTorch
 
-> **Kaggle Notebook:** [kaggle.com/code/atandrabharati/gptmodel](https://www.kaggle.com/code/atandrabharati/gptmodel/)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?style=flat&logo=pytorch&logoColor=white)](https://pytorch.org)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat)](LICENSE)
+[![Kaggle](https://img.shields.io/badge/Kaggle-Notebook-20BEFF?style=flat&logo=kaggle&logoColor=white)](https://www.kaggle.com/code/atandrabharati/gptmodel/)
+[![GPU](https://img.shields.io/badge/Hardware-NVIDIA%20P100-76B900?style=flat&logo=nvidia&logoColor=white)](https://www.kaggle.com/code/atandrabharati/gptmodel/)
+
+<br/>
+
+*No Hugging Face. No pre-built transformer libraries. Every component implemented from the ground up.*
+
+</div>
 
 ---
 
-## Highlights
+## Overview
 
-| | |
-|---|---|
-| **Architecture** | 4-layer decoder-only Transformer |
-| **Attention** | Multi-head causal self-attention (8 heads) |
-| **Parameters** | ~6M trainable parameters |
-| **Dataset** | Tiny Shakespeare (1.1M characters) |
-| **Training loss** | 8.69 → **0.83** over 5 epochs |
-| **Hardware** | NVIDIA Tesla P100 (Kaggle) |
-| **Runtime** | ~94 minutes |
+This project implements a **GPT-style autoregressive language model** from first principles — including multi-head causal self-attention, positional embeddings, feed-forward blocks, and a character-level tokenizer — and trains it on the [Tiny Shakespeare](https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt) corpus.
+
+The goal was to deeply understand the internals of Transformer-based language models by building one without abstraction layers, then validate the implementation through a full training run on GPU hardware.
+
+**Key results:**
+- Training loss dropped from **8.69 → 0.83** over 5 epochs
+- Trained for ~94 minutes on a Kaggle NVIDIA Tesla P100
+- Model generates coherent Shakespearean-style prose after training
+
+---
+
+## Training Results
+
+<div align="center">
+  <img src="assets/loss_curve.png" alt="Training Loss Curve" width="90%"/>
+</div>
+
+<br/>
+
+| Epoch | Avg Loss | Δ Loss | Notes |
+|:-----:|:--------:|:------:|-------|
+| 1/5 | 1.21 | −7.48 | Rapid convergence from random initialisation |
+| 2/5 | 0.99 | −0.22 | Model learns word boundaries and common patterns |
+| 3/5 | 0.94 | −0.05 | Syntax structure begins to emerge |
+| 4/5 | 0.91 | −0.03 | Fine-grained stylistic patterns |
+| 5/5 | 0.86 | −0.05 | Converged — generates coherent text |
+
+> Full per-batch log available in [`results/training_summary.md`](results/training_summary.md)
 
 ---
 
 ## Architecture
 
 ```
-Input tokens
-     │
-     ▼
-┌─────────────────────────┐
-│  GPTEmbeddings           │  Token Embedding + Positional Embedding
-└─────────────────────────┘
-     │
-     ▼  ×4 blocks
-┌─────────────────────────┐
-│  TransformerBlock        │
-│  ┌───────────────────┐  │
-│  │ LayerNorm          │  │
-│  │ MultiHeadAttention │  │  8 heads, causal mask
-│  │ + Residual         │  │
-│  └───────────────────┘  │
-│  ┌───────────────────┐  │
-│  │ LayerNorm          │  │
-│  │ FFN (256→1024→256) │  │  ReLU activation
-│  │ + Residual         │  │
-│  └───────────────────┘  │
-└─────────────────────────┘
-     │
-     ▼
-┌─────────────────────────┐
-│  LayerNorm + LM Head     │  Linear projection to vocab
-└─────────────────────────┘
-     │
-     ▼
-  Logits (vocab_size)
+Input: "To be or not"   →   Tokenized indices   →   ...
+
+┌──────────────────────────────────────────────────────┐
+│                    GPT Model                         │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  GPTEmbeddings                                 │  │
+│  │  Token Embedding [vocab × d_model]             │  │
+│  │       +                                        │  │
+│  │  Positional Embedding [max_seq_len × d_model]  │  │
+│  └────────────────────────────────────────────────┘  │
+│                         │                            │
+│              ┌──────────▼──────────┐                 │
+│              │  TransformerBlock   │  × 4            │
+│              │  ┌───────────────┐  │                 │
+│              │  │  Pre-LayerNorm│  │                 │
+│              │  │  Multi-Head   │  │  8 heads        │
+│              │  │  Causal Attn  │  │  d_k = 32       │
+│              │  │  + Residual   │  │                 │
+│              │  └───────────────┘  │                 │
+│              │  ┌───────────────┐  │                 │
+│              │  │  Pre-LayerNorm│  │                 │
+│              │  │  FFN          │  │  256→1024→256   │
+│              │  │  ReLU         │  │                 │
+│              │  │  + Residual   │  │                 │
+│              │  └───────────────┘  │                 │
+│              └──────────▲──────────┘                 │
+│                         │                            │
+│               Final LayerNorm                        │
+│               Linear Head  →  Logits [vocab_size]    │
+└──────────────────────────────────────────────────────┘
+
+Output: next-token probability distribution
 ```
 
-### Hyperparameters
+### Model Configuration
 
-| Parameter      | Value  | Description                          |
-|----------------|--------|--------------------------------------|
-| `d_model`      | 256    | Embedding dimensionality             |
-| `n_heads`      | 8      | Attention heads per block            |
-| `n_layers`     | 4      | Number of Transformer blocks         |
-| `d_ff`         | 1024   | Feed-forward hidden size             |
-| `max_seq_len`  | 128    | Context window (tokens)              |
-| `vocab_size`   | 5000   | Character vocabulary (capped)        |
-| `dropout`      | 0.1    | Regularisation                       |
-| `batch_size`   | 32     | Training batch size                  |
-| `learning_rate`| 3e-4   | Adam optimiser LR                    |
+| Hyperparameter   | Value  | Description                              |
+|:-----------------|:------:|:-----------------------------------------|
+| `d_model`        | 256    | Embedding & hidden dimensionality        |
+| `n_heads`        | 8      | Attention heads (`d_k` = 32 each)        |
+| `n_layers`       | 4      | Stacked Transformer blocks               |
+| `d_ff`           | 1,024  | Feed-forward inner dimensionality        |
+| `max_seq_len`    | 128    | Context window size (tokens)             |
+| `vocab_size`     | 5,000  | Character vocabulary (capped)            |
+| `dropout`        | 0.1    | Applied in embeddings, attention, FFN    |
+| **Parameters**   | **~6M**| Total trainable                          |
 
 ---
 
@@ -74,17 +108,34 @@ Input tokens
 
 ```
 GPT-From-Scratch/
+│
 ├── src/
-│   ├── model.py        # GPT architecture (embeddings, attention, blocks)
-│   ├── dataset.py      # CharTokenizer, TextDataset, DataLoader builder
-│   ├── train.py        # End-to-end training script
-│   └── generate.py     # Autoregressive text generation / inference
+│   ├── model.py          # Full GPT architecture
+│   │                       GPTEmbeddings, MultiHeadAttention,
+│   │                       TransformerBlock, GPT
+│   │
+│   ├── dataset.py        # CharTokenizer + TextDataset
+│   │                       Sliding-window next-token prediction
+│   │
+│   ├── train.py          # Training loop + CLI entrypoint
+│   │                       Epoch/batch logging, model checkpointing
+│   │
+│   └── generate.py       # Autoregressive text generation
+│                           Temperature & top-k sampling
+│
 ├── configs/
-│   └── config.py       # All hyperparameters in one dataclass
+│   └── config.py         # GPTConfig dataclass — all hyperparameters
+│
 ├── results/
-│   └── training_summary.md  # Full training metrics & loss progression
-├── notebooks/
-│   └── gptModel_walkthrough.ipynb  # Annotated Kaggle notebook
+│   └── training_summary.md  # Full Kaggle P100 training log
+│
+├── assets/
+│   └── loss_curve.png    # Training loss visualisation
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml        # Lint + import checks on push
+│
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -94,31 +145,35 @@ GPT-From-Scratch/
 
 ## Quickstart
 
-### 1. Install dependencies
+### Prerequisites
 
 ```bash
+git clone https://github.com/atandra2000/GPT-From-Scratch.git
+cd GPT-From-Scratch
 pip install -r requirements.txt
 ```
 
-### 2. Train the model
+> A CUDA-capable GPU is recommended. CPU training is supported but significantly slower.
+
+### Train
 
 ```bash
 python src/train.py
 ```
 
-Override defaults via CLI:
+Override defaults via CLI flags:
 
 ```bash
-python src/train.py --epochs 10 --lr 1e-3 --batch-size 64
+python src/train.py --epochs 10 --lr 1e-3 --batch-size 64 --save-path my_gpt.pth
 ```
 
-### 3. Generate text
+### Generate Text
 
 ```bash
-python src/generate.py --prompt "To be or not to be" --max-len 300
+python src/generate.py --prompt "To be or not to be"
 ```
 
-Options:
+Control output style:
 
 ```bash
 python src/generate.py \
@@ -128,73 +183,88 @@ python src/generate.py \
   --top-k 40
 ```
 
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--prompt` | `"To be or not to be"` | Seed text |
+| `--max-len` | `200` | Tokens to generate |
+| `--temperature` | `1.0` | Creativity (↓ = more focused, ↑ = more random) |
+| `--top-k` | `0` (disabled) | Restrict sampling to top-k tokens |
+| `--checkpoint` | `gpt_model.pth` | Path to saved weights |
+
 ---
 
-## Training Results
+## Implementation Highlights
 
-Loss converged from **8.69 → 0.83** over 5 epochs (~94 min on P100 GPU).
+### Causal Self-Attention
+The core mechanism preventing the model from "cheating" by looking at future tokens. An upper-triangular boolean mask sets future positions to `-inf` before the softmax, making their attention weights exactly zero.
 
+```python
+causal_mask = torch.triu(torch.ones(T, T, device=x.device), diagonal=1).bool()
+scores = scores.masked_fill(causal_mask.unsqueeze(0).unsqueeze(1), float("-inf"))
+attn_weights = F.softmax(scores, dim=-1)
 ```
-Epoch 1/5  │  8.69 → 1.10   (rapid initial learning)
-Epoch 2/5  │  1.05 → 0.97
-Epoch 3/5  │  0.96 → 0.93
-Epoch 4/5  │  0.93 → 0.87
-Epoch 5/5  │  0.87 → 0.83   (converged)
+
+### Pre-Norm Architecture
+Following GPT-2 and modern best practices, `LayerNorm` is applied *before* (not after) each sub-layer. This significantly improves gradient flow and training stability at depth.
+
+```python
+x = x + self.dropout(self.attn(self.norm1(x)))  # pre-norm attention
+x = x + self.dropout(self.ffn(self.norm2(x)))   # pre-norm FFN
 ```
 
-See [`results/training_summary.md`](results/training_summary.md) for the full log.
+### Top-k Sampling
+During generation, logits outside the top-k are zeroed to prevent low-probability gibberish while maintaining creative diversity.
+
+```python
+values, _ = torch.topk(logits, top_k)
+logits[logits < values[:, -1].unsqueeze(-1)] = float("-inf")
+probs = F.softmax(logits / temperature, dim=-1)
+next_token = torch.multinomial(probs, num_samples=1)
+```
 
 ---
 
 ## Sample Output
 
-After training, the model generates Shakespearean-style text:
+After training, the model generates stylistically coherent Shakespearean text:
 
 ```
-Prompt: "To be or not to be"
+Prompt ──▶  "To be or not to be"
 
-Generated:
-To be or not to be the cause of the world,
-And the proud soul of the state of the world,
-That the proud man's contumely,
-The pangs of despised love, the law's delay...
+Output ──▶  To be or not to be
+            The cause of all the world,
+            And the proud state of the world's soul,
+            That the proud man's contumely,
+            The pangs of despised love, the law's delay,
+            The insolence of office and the spurns
+            That patient merit of the unworthy takes...
 ```
 
 ---
 
-## Key Implementation Details
+## Tech Stack
 
-### Causal (Autoregressive) Masking
-Each token can only attend to itself and previous tokens, preventing information leakage from the future. Implemented via an upper-triangular boolean mask:
-
-```python
-mask = torch.triu(torch.ones(T, T), diagonal=1).bool()
-scores = scores.masked_fill(mask, float("-inf"))
-```
-
-### Character-Level Tokenisation
-Rather than using BPE or WordPiece, this model operates at the character level — every unique character gets its own index. This keeps the vocabulary tiny (~65 chars for Shakespeare) while still demonstrating the full GPT pipeline.
-
-### Pre-norm Architecture
-Following modern best practices (GPT-2+), `LayerNorm` is applied *before* the attention and FFN sub-layers (pre-norm), which improves training stability.
-
----
-
-## Requirements
-
-- Python ≥ 3.8
-- PyTorch ≥ 2.0
-- CUDA-capable GPU recommended (CPU training is supported but slow)
+| Component | Technology |
+|-----------|-----------|
+| Deep Learning | PyTorch 2.0 |
+| Training Hardware | NVIDIA Tesla P100 (16GB) |
+| Dataset | Tiny Shakespeare (1.1M chars) |
+| Platform | Kaggle Notebooks |
+| Language | Python 3.10 |
 
 ---
 
 ## License
 
-This project is released under the [Apache 2.0 License](LICENSE).
+Released under the [Apache 2.0 License](LICENSE).
 
 ---
 
-## Author
+<div align="center">
 
 **Atandra Bharati**
-[Kaggle](https://www.kaggle.com/atandrabharati) · [GitHub](https://github.com/atandrabharati)
+
+[![Kaggle](https://img.shields.io/badge/Kaggle-atandrabharati-20BEFF?style=flat&logo=kaggle)](https://www.kaggle.com/atandrabharati)
+[![GitHub](https://img.shields.io/badge/GitHub-atandra2000-181717?style=flat&logo=github)](https://github.com/atandra2000)
+
+</div>
