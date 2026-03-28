@@ -5,7 +5,7 @@ All hyper-parameters in one place. Modify this file to experiment with
 different model sizes, learning rates, or training durations.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
