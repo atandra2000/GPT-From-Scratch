@@ -9,7 +9,7 @@
 
 - `DeepSeek-v3-Lite` — 422M params, MLA + AuxLossFreeGate MoE + MTP
 - `LLaMA-3-Lite` — 515M params, GQA + SwiGLU + chunked cross-entropy
-- `FusionLLM` — 415.6M active / 868.6M stored, MLA + GDN + MoE + MTP hybrid
+- `HyMo` — 750M active / 1.86B stored, 3:1 GDN/MLA + Asymmetric MoE + MTP
 - `TranslationLM` — encoder–decoder Transformer for EN→IT
 
 The repo is intentionally **frozen at educational scale** (~6M params, character-level tokenizer, Tiny Shakespeare). Every later LLM project in this portfolio inherits the same component-by-component from-scratch discipline this repo established.
@@ -30,7 +30,7 @@ For the *reference* decoder-only Transformer block implemented in this repo, see
 
 - `LLM/LLaMA-3-Lite/model.py` — adds GQA, RoPE, SwiGLU, RMSNorm, gradient checkpointing
 - `LLM/DeepSeek-v3-Lite/models/transformer.py` — adds MLA absorption trick
-- `LLM/FusionLLM/` — interleaves MLA + MoE blocks with Gated Delta Net linear attention
+- `LLM/HyMo/` — interleaves MLA + MoE blocks with Gated Delta Net linear attention; flagship hybrid
 
 ## License
 
