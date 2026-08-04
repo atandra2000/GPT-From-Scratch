@@ -21,10 +21,10 @@ SHAKESPEARE_URL = (
 )
 
 
-def download_shakespeare(url: str = SHAKESPEARE_URL) -> str:
+def download_shakespeare() -> str:
     """Downloads the Tiny Shakespeare corpus and returns it as a string."""
-    print(f"Downloading dataset from {url} ...")
-    response = requests.get(url, timeout=30)
+    print(f"Downloading dataset from {SHAKESPEARE_URL} ...")
+    response = requests.get(SHAKESPEARE_URL, timeout=30)
     response.raise_for_status()
     text = response.text
     print(f"Dataset downloaded: {len(text):,} characters")
@@ -111,8 +111,6 @@ def build_dataloader(
     vocab_size: int,
     seq_len: int,
     batch_size: int,
-    shuffle: bool = True,
-    num_workers: int = 0,
 ):
     """
     Convenience wrapper: tokenize text and return (tokenizer, DataLoader).
@@ -128,8 +126,8 @@ def build_dataloader(
     loader = DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
+        shuffle=True,
+        num_workers=0,
         pin_memory=True,
     )
     print(

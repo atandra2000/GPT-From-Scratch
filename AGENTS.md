@@ -42,5 +42,5 @@ work?", "Why does the c_proj init use std=0.02 / sqrt(2 * n_layer)?",
 
 ## 4. Known caveats
 
-- Educational only; not benchmarked against other 13 projects.
+- Educational only; not benchmarked against other portfolio projects.
 - `gpt2-xl` loading requires ~6 GB RAM.
