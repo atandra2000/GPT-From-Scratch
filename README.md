@@ -42,7 +42,29 @@ The goal was to deeply understand the internals of modern large language models 
   <img src="assets/training_curves.png" alt="Training Curves" width="95%"/>
 </div>
 
-> Full per-batch training log: [`results/training_summary.md`](results/training_summary.md)
+> Full per-batch training log was captured during the run; the repository
+> keeps the trained model, config, and curves for reproducibility.
+
+---
+
+## Portfolio Context
+
+`GPT-From-Scratch` is a **foundational educational project**: it predates and
+motivates the serious LLM reproductions that followed, and is intentionally
+frozen at educational scale (~6M params, character-level tokenizer, Tiny
+Shakespeare). Every later project inherits the same component-by-component
+from-scratch discipline this repo established:
+
+| Project | What it inherits / adds |
+|---|---|
+| `LLM/LLaMA-3-Lite` | Same pre-norm + causal-mask + residual pattern; adds GQA, RoPE, SwiGLU, RMSNorm, gradient checkpointing |
+| `LLM/DeepSeek-v3-Lite` | Same decoder block; adds MLA absorption trick, MoE |
+| `LLM/HyMo` | Interleaves MLA + MoE blocks with Gated Delta Net linear attention; flagship hybrid |
+
+The training run, architecture, and loss curves are reproducible from
+`src/train.py`: loss 8.69 → 0.83 over 5 epochs on a P100 in ~94 min, final
+perplexity 2.29. Because the educational deliverable is the complete and
+correct decoder-only stack, the codebase is not actively iterated.
 
 ---
 
@@ -136,9 +158,6 @@ GPT-From-Scratch/
 │
 ├── configs/
 │   └── config.py         # GPTConfig dataclass — single source of truth
-│
-├── results/
-│   └── training_summary.md  # Full Kaggle P100 training log
 │
 ├── assets/
 │   └── training_curves.png  # 6-panel metrics chart
