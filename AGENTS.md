@@ -3,44 +3,54 @@
 > Read root `AGENTS.md` and `self.md` first. Workspace rules are
 > authoritative; this file adds project-specific rules only.
 
-> **Project:** `LLM/GPT2/` · **Type:** educational decoder-only LM
-> **Architecture:** GPT-2 from Radford et al. 2019 — 12 layers, 768 dim,
-> 12 heads, 50,257 vocab · **Scale:** 124M params, 200 iters
-> **Hardware:** MPS / CUDA / CPU · **Status:** educational / demonstration.
-> **Detail:** see `README.md §1`.
+> **Project:** `LLM/GPT2/` · **Type:** foundational educational decoder-only LM
+> **Architecture:** GPT-style from scratch — 4 layers, 256 dim, 8 heads,
+> char-level vocab (5,000) · **Scale:** ~6M params, 5 epochs
+> **Hardware:** P100 (Kaggle) · **Status:** complete, frozen at educational scale.
+> **Detail:** see `README.md`.
 
 ## 1. Subagent: `gpt2-educational`
 
-**Triggers:** "Show me a minimal GPT-2", "How does CausalSelfAttention
-work?", "Why does the c_proj init use std=0.02 / sqrt(2 * n_layer)?",
-"Train GPT-2 from scratch on Shakespeare."
+**Triggers:** "Show me a from-scratch GPT-style model", "How does the causal
+attention mask work?", "Why pre-norm blocks?", "Train GPT from scratch on
+Tiny Shakespeare."
 
 **Knows cold:**
-- The portfolio's **educational** project — minimal from-scratch GPT-2 in
-  ~204 lines (`train_gpt2.py`). Each component built layer-by-layer:
-  fused QKV, GELU-tanh MLP, pre-norm LayerNorm, tied I/O embeddings.
-- Loads HuggingFace pretrained weights (`gpt2` → `gpt2-xl`) for inference /
-  fine-tuning.
-- Tokenizer: `tiktoken` (GPT-2 BPE).
-- Training: AdamW (lr 3e-4), 200 iters, batch 4 × seq 128, auto-selects
-  `mps`/`cuda`/`cpu`. Dataset: Shakespeare *Coriolanus* (`input.txt`).
+- The portfolio's **foundational educational** project — a from-scratch
+  GPT-style decoder built entirely without abstraction layers
+  (`src/model.py`). Each component implemented by hand: `GPTEmbeddings`
+  (learned token + positional), `MultiHeadAttention` (8 heads, upper-triangular
+  causal mask), pre-norm `TransformerBlock` (ReLU FFN, residual), linear head.
+- No HuggingFace, no tiktoken — character-level tokenizer (`src/dataset.py`).
+- Training: Adam (lr 3e-4), 5 epochs, batch 32 × seq 128. Tiny Shakespeare,
+  auto-downloaded (Karpathy `char-rnn`). Loss 8.69 → 0.83 over ~94 min on P100.
+- Sampling: temperature + top-k (`src/generate.py`).
 
 ## 2. Hard rules
 
-1. **Always** preserve `c_proj` weight init `std = 0.02 / sqrt(2 * n_layer)`.
-   Naive init over-shoots activations at depth.
-2. **Always** use AdamW (lr 3e-4) for the canonical 200-iter run. Different
-   recipes (Lion, SOAP) lose the educational signal.
-3. **Never** swap to GPT-3 / GPT-4 architecture — this project must remain
-   GPT-2 (124M), the educational reference.
+1. **Keep it from-scratch and dependency-light.** No HF Trainer, no
+   `transformers` model classes, no tiktoken — the educational value is in
+   hand-built components.
+2. **Preserve the canonical 5-epoch recipe.** Adam (lr 3e-4) on Tiny
+   Shakespeare. Different recipes lose the clean loss-curve signal.
+3. **Never scale it up.** Do not swap to GPT-3/4-style architecture, add MoE,
+   MLA, or any 2024-era technique — this project stays the ~6M char-level
+   educational reference.
+4. **Don't backport the old nanoGPT docs.** The repo's self-description
+   (char-level, ~6M) is authoritative — earlier "124M / tiktoken / HF
+   loading" notes describe a superseded version and must not resurface.
 
 ## 3. Files
 
-- `train_gpt2.py` — full model + loop in ~204 lines.
-- `play.ipynb` — interactive generation.
-- `input.txt` — Shakespeare *Coriolanus* corpus.
+- `src/model.py` — `GPTEmbeddings`, `MultiHeadAttention`, `TransformerBlock`, `GPT`.
+- `src/dataset.py` — `CharTokenizer` (UNK handling), `TextDataset`, auto-download of Tiny Shakespeare.
+- `src/train.py` — full loop: Adam, CrossEntropyLoss, per-batch logging, checkpointing.
+- `src/generate.py` — autoregressive generation (temperature + top-k).
+- `configs/config.py` — `GPTConfig` dataclass (single source of truth).
 
 ## 4. Known caveats
 
-- Educational only; not benchmarked against other portfolio projects.
-- `gpt2-xl` loading requires ~6 GB RAM.
+- Educational only; not benchmarked against the other portfolio projects.
+- Character-level, so results are per-char (perp 2.29, 1.20 bits/char) — not
+  comparable to BPE-tokenized models.
+- Frozen at ~6M params by design.

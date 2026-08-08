@@ -3,52 +3,44 @@
 > Read root `AGENTS.md` and `self.md` first. Workspace rules are
 > authoritative; this file adds project-specific workflows.
 
-## Skill 1: Run the canonical 200-iter training
+## Skill 1: Run the canonical 5-epoch training
 
 ```bash
 cd LLM/GPT2
-python train_gpt2.py
+python src/train.py
 ```
 
-Expects `input.txt` (Shakespeare) in the repo root. Outputs loss curve in
-terminal + `log.txt`.
+`src/dataset.py` auto-downloads Tiny Shakespeare (Karpathy `char-rnn`).
+Prints per-batch and per-epoch loss; saves `gpt_model.pth`. Expected: loss
+8.69 → 0.83 over ~94 min on P100 (perplexity 2.29, 1.20 bits/char).
 
-## Skill 2: Load a HuggingFace pretrained checkpoint
+## Skill 2: Generate interactively
 
-```python
-import tiktoken
-from train_gpt2 import GPT, ModelConfig
-
-enc = tiktoken.get_encoding("gpt2")
-m = GPT(ModelConfig())                                  # 124M scratch
-# Or load any HF size:
-from transformers import GPT2LMHeadModel
-m.load_state_dict(GPT2LMHeadModel.from_pretrained("gpt2").state_dict())
+```bash
+python src/generate.py --prompt "To be or not to be" --max-len 200 --temperature 0.8 --top-k 40
 ```
 
-Supported HF sizes: `gpt2`, `gpt2-medium`, `gpt2-large`, `gpt2-xl`.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--prompt` | `"To be or not to be"` | Seed text |
+| `--max-len` | `200` | Tokens to generate |
+| `--temperature` | `1.0` | Creativity scale |
+| `--top-k` | `0` (disabled) | Restrict to top-k tokens |
+| `--checkpoint` | `gpt_model.pth` | Saved weights |
 
-## Skill 3: Generate interactively
+## Skill 3: Ablate a component
 
-Open `play.ipynb`. Prompts with `The capital of France is` should yield
-plausible completions on the pretrained `gpt2`. The 200-iter scratch model
-will produce Shakespearean-ish gibberish.
+To demonstrate e.g. "what happens without pre-norm":
 
-## Skill 4: Modify the block to ablate a component
-
-If you want to demonstrate e.g. "what happens without pre-norm":
-
-1. Edit `Block` in `train_gpt2.py` (the `forward` method, ~10 lines).
-2. Re-run `python train_gpt2.py`.
+1. Edit `TransformerBlock.forward` in `src/model.py`.
+2. Re-run `python src/train.py`.
 3. Compare loss curves.
-
-**Pitfall:** always re-init `c_proj` after changing the residual add path.
 
 ## Pitfalls
 
-- **Educational scope:** this project is intentionally tiny. Don't add MoE,
-  MLA, or any LLM/2024-era technique — it would defeat the purpose.
-- **`c_proj` init matters:** don't skip
-  `nn.init.normal_(self.c_proj.weight, std=0.02 / math.sqrt(2 * config.n_layer))`.
-- **Pretrained weight loading:** `gpt2-xl` (~1.5B params) won't fit on a
-  P100 / T4; use A100 80GB or larger.
+- **Educational scope:** intentionally tiny. Don't add MoE, MLA, or any
+  2024-era technique — it would defeat the purpose.
+- **Character-level:** the tokenizer is char-based (vocab 5,000, UNK
+  handling) — do not assume BPE / tiktoken semantics.
+- **No HF weights:** this repo never loads HuggingFace pretrained checkpoints;
+  it trains from scratch on Tiny Shakespeare.
