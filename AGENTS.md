@@ -1,7 +1,11 @@
 # AGENTS.md — GPT-2
 
-> Read root `AGENTS.md` and `self.md` first. Workspace rules are
-> authoritative; this file adds project-specific rules only.
+> Read the workspace `LLM/AGENTS.md` and the parent `CoreProjects/AGENTS.md`
+> (+ `self.md`) first. Higher-level rules are authoritative; this file adds
+> project-specific rules only.
+>
+> **This project is frozen at educational scale.** Default to reading and
+> explaining its code; only modify it for bug fixes or doc corrections.
 
 > **Project:** `LLM/GPT2/` · **Type:** foundational educational decoder-only LM
 > **Architecture:** GPT-style from scratch — 4 layers, 256 dim, 8 heads,
