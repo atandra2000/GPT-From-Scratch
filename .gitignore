@@ -47,3 +47,6 @@ runs/
 
 # codegraph index (binary, local only)
 .codegraph/
+
+# local harness state
+.claude/
